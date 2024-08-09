@@ -65,6 +65,7 @@ io.on("connection", (socket) => {
       const index = lobbies[lobbyId]?.users.indexOf(userId);
       
       if (index > -1) {
+        changeTurn(lobbyId, userId);
         lobbies[lobbyId].users.splice(index, 1);
         try {
           const userList = await getUserList(lobbyId);
@@ -75,17 +76,16 @@ io.on("connection", (socket) => {
         }
       }
 
-      if(lobbies[lobbyId].owner !== null && lobbies[lobbyId].owner.id === userId) {
+      if((lobbies[lobbyId]?.owner ?? null) !== null && lobbies[lobbyId]?.owner.id === userId) {
         const newOwner = await User.findByPk(lobbies[lobbyId].users[0]);
         lobbies[lobbyId].owner = newOwner;
-        console.log(lobbies[lobbyId].owner);
         io.to(lobbyId).emit("giveOwner", { user: newOwner });
       }
 
-      if(!lobbies[lobbyId].users || lobbies[lobbyId].users.length === 0) {
+      if (lobbies[lobbyId]?.users && lobbies[lobbyId].users.length === 0) {
         delete lobbies[lobbyId];
         socket.leave(lobbyId);
-      }
+    }
 
       callback(true);
     }
@@ -103,6 +103,11 @@ io.on("connection", (socket) => {
         } catch (error) {
           console.error("Error al obtener la lista de usuarios:", error);
         }
+      }
+
+      if(!lobbies[lobbyId].users || lobbies[lobbyId].users.length === 0) {
+        delete lobbies[lobbyId];
+        socket.leave(lobbyId);
       }
 
       callback(true);
@@ -139,14 +144,7 @@ io.on("connection", (socket) => {
 
   socket.on("changeGameTurn", async (lobbyId, userId, callback) => {
     if(lobbies[lobbyId]) {
-      const index = lobbies[lobbyId].users.indexOf(userId);
-      let nextIndex = index + 1;
-      if(nextIndex >= lobbies[lobbyId].users.length) {
-        nextIndex = 0;
-      }
-      const nextUserId = lobbies[lobbyId].users[nextIndex];
-      const nextUser = await User.findByPk(nextUserId);
-      io.to(lobbyId).emit("gameTurnChanged", { nextUser });
+      changeTurn(lobbyId, userId);
       callback(true);
     }
 
@@ -217,6 +215,18 @@ io.on("connection", (socket) => {
       console.error("Error al obtener la lista de usuarios:", error);
       return [];
     }
+  }
+
+  async function changeTurn(lobbyId, userId) {
+    const index = lobbies[lobbyId].users.indexOf(userId);
+    let nextIndex = index + 1;
+    if(nextIndex >= lobbies[lobbyId].users.length) {
+      nextIndex = 0;
+    }
+    const nextUserId = lobbies[lobbyId].users[nextIndex];
+    const nextUser = await User.findByPk(nextUserId);
+
+    io.to(lobbyId).emit("gameTurnChanged", { nextUser });
   }
 });
 
