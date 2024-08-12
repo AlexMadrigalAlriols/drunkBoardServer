@@ -10,7 +10,11 @@ const routes = require("./src/routes");
 const { User, Board, Cell } = require("./src/models"); // Asegúrate de que la ruta es correcta
 const path = require('path');
 
-app.use(cors());
+app.use(cors({
+  origin: '*', // Permite todas las peticiones desde cualquier origen
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Métodos HTTP permitidos
+  allowedHeaders: ['Content-Type', 'Authorization'], // Cabeceras permitidas
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
